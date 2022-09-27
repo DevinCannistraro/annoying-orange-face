@@ -3,11 +3,13 @@ import dlib
 from imutils import face_utils, resize
 import numpy as np
 
-orange_img = cv2.imread('orange.jpg')
+#https://medium.com/@MeerAjaz/the-function-is-not-implemented-6804e9b38b06
+
+orange_img = cv2.imread('franc.png')
 orange_img = cv2.resize(orange_img, dsize=(512, 512))
 
 detector = dlib.get_frontal_face_detector()
-predictor = dlib.shape_predictor('/Users/brad/Downloads/shape_predictor_68_face_landmarks.dat')
+predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
 
 cap = cv2.VideoCapture(0)
 
