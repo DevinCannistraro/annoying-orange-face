@@ -3,7 +3,7 @@
     "document_id": "QHtOxnjy2AHplQQ7gjVL",
     "original_document_id": "QHtOxnjy2AHplQQ7gjVL",
     "version": "29",
-    "lastChanged": "1664848131931",
+    "lastChanged": "1664922197357",
     "preview": "icon.png",
     "videoPreview": "preview.mp4",
     "videoPreviewUpdateTime": "",
@@ -55,9 +55,13 @@
             "selectionSetList": ""
         },
         "MetaInfoUIComponent": {
-            "hints": "",
-            "lens": "Untitled",
-            "applicability": "3",
+            "icon_hash": "56814dbefc6c60009fe6066406087653",
+            "icon_path": "icon.png",
+            "hints": [
+                ""
+            ],
+            "lens": "Eyes Mouth Only",
+            "applicability": "1",
             "lens_descriptors": "",
             "Spectacles2021UseAllowed": "false"
         },
