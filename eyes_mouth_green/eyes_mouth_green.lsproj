@@ -1,9 +1,9 @@
 {
     "lens_id": "",
-    "document_id": "QHtOxnjy2AHplQQ7gjVL",
+    "document_id": "djr5CBJIO8bLNqSVvGRp",
     "original_document_id": "QHtOxnjy2AHplQQ7gjVL",
     "version": "29",
-    "lastChanged": "1664973387155",
+    "lastChanged": "1664973731618",
     "preview": "icon.png",
     "videoPreview": "preview.mp4",
     "videoPreviewUpdateTime": "",
@@ -96,7 +96,9 @@
         },
         "InspectorUiComponent": {
             "collapsedList": [
-                ""
+                [
+                    "1664847425024380:4607"
+                ]
             ]
         },
         "ObjectTracking3DUIComponent": {
@@ -203,7 +205,9 @@
                 "4": "1664847467205429:6723",
                 "5": "1664847467205896:6725",
                 "6": "1664847620705572:16413",
-                "7": "1664847754032742:22513"
+                "7": "1664847754032742:22513",
+                "8": "1664973664100965:29960",
+                "9": "1664973675678138:30355"
             }
         },
         "LayerComponent": {
@@ -508,7 +512,7 @@
         "InspectorController": {
             "selection": {
                 "objects": [
-                    "1664847425023929:4605"
+                    "1664973675678138:30355"
                 ]
             }
         },
