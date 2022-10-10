@@ -3,7 +3,7 @@
     "document_id": "djr5CBJIO8bLNqSVvGRp",
     "original_document_id": "QHtOxnjy2AHplQQ7gjVL",
     "version": "29",
-    "lastChanged": "1664973731618",
+    "lastChanged": "1665440514819",
     "preview": "icon.png",
     "videoPreview": "preview.mp4",
     "videoPreviewUpdateTime": "",
@@ -22,8 +22,8 @@
         "lastSavedWith": {
             "type": "Public",
             "major": "4",
-            "minor": "28",
-            "patch": "1",
+            "minor": "31",
+            "patch": "0",
             "build": "0"
         }
     },
@@ -512,7 +512,7 @@
         "InspectorController": {
             "selection": {
                 "objects": [
-                    "1664973675678138:30355"
+                    "1664847425023929:4605"
                 ]
             }
         },
@@ -547,6 +547,7 @@
             "30": "",
             "31": "",
             "32": "",
+            "33": "",
             "34": ""
         },
         "ObjectPrefabController": {
