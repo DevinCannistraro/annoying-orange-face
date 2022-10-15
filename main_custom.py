@@ -2,6 +2,9 @@ import cv2
 import dlib
 from imutils import face_utils, resize
 import numpy as np
+import skimage
+import os
+import PIL
 
 #https://www.youtube.com/watch?v=V2gmgkSqyi8
 #https://medium.com/@MeerAjaz/the-function-is-not-implemented-6804e9b38b06
@@ -9,15 +12,41 @@ import numpy as np
 def createBox(img,points,scale=5):
     mask = np.zeros_like(img)
     mask = cv2.fillPoly(mask,points,(255,255,255))
-    cv2.imshow('mask',mask)
+    bbox = cv2.boundingRect(points)
+    x,y,w,h = bbox
 
-orange_img = cv2.imread('franc.png')
-orange_img = cv2.resize(orange_img, dsize=(512, 512))
+    masked = cv2.bitwise_and(img, mask)
+    imgCrop = masked[y:y+h,x:x+w]
+    #imgCrop = resize(imgCrop, width=200)
+
+    # make transparent
+
+    alpha = np.sum(imgCrop, axis=-1) > 0
+
+    # Convert True/False to 0/255 and change type to "uint8" to match "na"
+    alpha = np.uint8(alpha * 255)
+
+    # Stack new alpha layer with existing image to go from BGR to BGRA, i.e. 3 channels to 4 channels
+    res = np.dstack((imgCrop, alpha))
+    imgCrop = res
+    return imgCrop
+
+def anti_alias_resize_path(path):
+
+def add_image_at_position(base,overlay,position):
+    x_offset,y_offset = position
+    base[y_offset:y_offset + overlay.shape[0], x_offset:x_offset + overlay.shape[1]] = overlay
+
+def do_cv2_processing():
+    print("test")
 
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
+
+if not os.path.exists("TEMP_IMS"):
+    os.mkdir("TEMP_IMS")
 
 while cap.isOpened():
     ret, img = cap.read()
@@ -27,7 +56,6 @@ while cap.isOpened():
 
     faces = detector(img)
 
-    result = orange_img.copy()
     compositImg = img.copy()
     imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
@@ -35,7 +63,7 @@ while cap.isOpened():
         face = faces[0]
         x1,y1 = face.left(), face.top()
         x2,y2 = face.right(),face.bottom()
-        compositImg = cv2.rectangle(img,(x1,y1),(x2,y2),(0,255,0),2)
+        #compositImg = cv2.rectangle(img,(x1,y1),(x2,y2),(0,255,0),2)
         landmarks = predictor(imgGray,face)
 
         myPoints = []
@@ -43,17 +71,24 @@ while cap.isOpened():
             x = landmarks.part(n).x
             y = landmarks.part(n).y
             myPoints.append([x,y])
-            cv2.circle(compositImg,(x,y),5,(50,50,255),cv2.FILLED)
-            cv2.putText(compositImg,str(n),(x,y-10),cv2.FONT_HERSHEY_COMPLEX_SMALL,0.8,(0,0,255))
-    if len(myPoints) > 0:
-        myPoints = np.array(myPoints)
-        imgLeftEye = createBox(compositImg,myPoints[48:60])
+            #cv2.circle(compositImg,(x,y),5,(50,50,255),cv2.FILLED)
+            #cv2.putText(compositImg,str(n),(x,y-10),cv2.FONT_HERSHEY_COMPLEX_SMALL,0.8,(0,0,255))
+        if len(myPoints) > 0:
+            myPoints = np.array(myPoints)
+            imgMouth = createBox(img,np.int32([myPoints[48:60]]))
+            cv2.imshow("mouth",imgMouth)
+            cv2.imwrite("intermediate_mouth.png", imgMouth)
+
+            #https://stackoverflow.com/questions/62078016/smooth-the-edges-of-binary-images-face-using-python-and-open-cv maybe look at this
+
+            imgLeftEye = createBox(img, np.int32([myPoints[36:42]]))
+            imgRightEye = createBox(img, np.int32([myPoints[42:48]]))
 
     cv2.imshow('result', compositImg)
 
-    you were at 20:28 in the linked youtube video. currently trying to get a much cleaner mask / outline for
-        tracing the mouth and eyes. we need to test if this is a viable proceedure to do
-        this seems somewhat promising.
+    #you were at 20:28 in the linked youtube video. currently trying to get a much cleaner mask / outline for
+    #    tracing the mouth and eyes. we need to test if this is a viable proceedure to do
+    #    this seems somewhat promising.
 
 
     # cv2.imshow('img', img)

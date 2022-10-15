@@ -11,18 +11,17 @@ orange_img = cv2.resize(orange_img, dsize=(512, 512))
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 
 while cap.isOpened():
     ret, img = cap.read()
 
     if not ret:
         break
-
     faces = detector(img)
 
     result = orange_img.copy()
-
+    print("test")
     if len(faces) > 0:
         face = faces[0]
         
@@ -93,7 +92,7 @@ while cap.isOpened():
         # cv2.imshow('right', right_eye_img)
         # cv2.imshow('mouth', mouth_img)
         # cv2.imshow('face', face_img)
-
+        print("test")
         cv2.imshow('result', result)
 
     # cv2.imshow('img', img)
