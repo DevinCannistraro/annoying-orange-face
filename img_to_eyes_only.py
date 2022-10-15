@@ -5,7 +5,7 @@ import numpy as np
 import skimage
 import os
 import PIL
-from PIL import Image
+from PIL import Image, ImageChops,ImageStat
 from scipy import interpolate
 from matplotlib import pyplot as plt
 
@@ -20,15 +20,13 @@ def createBox(img,points):
 
     masked = cv2.bitwise_and(img, mask)
     imgCrop = masked[y:y+h,x:x+w]
-    #imgCrop = resize(imgCrop, width=200)
 
+    # crop mask so it can be used below for alpha channel
+    mask = mask[y:y+h,x:x+w]
     # make transparent
-
-    alpha = np.sum(imgCrop, axis=-1) > 0
-
+    alpha = np.sum(mask, axis=-1) > 0
     # Convert True/False to 0/255 and change type to "uint8" to match "na"
     alpha = np.uint8(alpha * 255)
-
     # Stack new alpha layer with existing image to go from BGR to BGRA, i.e. 3 channels to 4 channels
     res = np.dstack((imgCrop, alpha))
     imgCrop = res
@@ -40,7 +38,8 @@ def resize_image_CV2(im,scalar):
     height = int(im.shape[0] * scalar)
     dim = (width, height)
     # resize image
-    resized = cv2.resize(img, dim, interpolation=cv2.INTER_AREA)
+    #resized = cv2.resize(img, dim)
+    resized = cv2.resize(im, (0, 0), fx=scalar, fy=scalar)
 
     return resized
 
@@ -48,33 +47,37 @@ def resize_points(points,scalar):
     new_points = points * scalar
     return new_points
 
-def anti_alias_resize_path_PIL(im,scaler,name):
-    width, height = im.size
-    im = im.resize((width * scaler, height * scaler), resample=Image.Resampling.LANCZOS)
-    return im #im.save("TEMP_IMS//" + name + ".png")
-
 def do_PIL_processing(mouth_path,left_eye_path,right_eye_path):
-    mouth_im = Image.open(mouth_path)
-    left_eye_im = Image.open(left_eye_path)
-    right_eye_im = Image.open(right_eye_path)
-    #mouth_im = anti_alias_resize_path_PIL(mouth_im,2,"mouth_resize")
-    #left_eye_im = anti_alias_resize_path_PIL(left_eye_im, 2, "left_resize")
-    #right_eye_im = anti_alias_resize_path_PIL(right_eye_im, 2, "right_resize")
+    mouth_path = mouth_path[..., [2, 1, 0, 3]].copy() # convert from BGRA to RGBA
+    left_eye_path = left_eye_path[..., [2, 1, 0, 3]].copy()
+    right_eye_path = right_eye_path[..., [2, 1, 0, 3]].copy()
+    mouth_im = Image.fromarray(mouth_path)
+    left_eye_im = Image.fromarray(left_eye_path)
+    right_eye_im = Image.fromarray(right_eye_path)
+
+    #can save intermediates if you would like
+    #mouth_im.save("TEMP_IMS//m_test" + ".png")
+    #left_eye_im.save("TEMP_IMS//le_test" + ".png")
+    #right_eye_im.save("TEMP_IMS//re_test" + ".png")
 
     blank_image = Image.new("RGBA",(1920,1080),(0,0,0,0))
 
-    blank_image.paste(mouth_im,(300,100),mouth_im)
-    blank_image.paste(left_eye_im, (1000, 400), left_eye_im)
-    blank_image.paste(right_eye_im, (1500, 700), right_eye_im)
+    print(mouth_im.getpixel((10,10)))
+    print(blank_image.getpixel((10,10)))
 
-    #Image.Image.paste(blank_image,mouth_im,(300,100))
-    #Image.Image.paste(blank_image, left_eye_im, (1000, 400))
-    #Image.Image.paste(blank_image, left_eye_im, (1500, 700))
+    desired_mouth_mid_pos = (300, 100)
+    desired_left_eye_mid = (1000, 400)
+    desired_right_eye_mid = (1500, 700)
+    # add the midpoint to each to get them to be middle justified
+    mouth_pos = (300, 100)#desired_mouth_mid_pos + (int(mouth_im.size[0]/2),int(mouth_im.size[1]/2))
+    left_eye_pos = (1000, 400)#desired_left_eye_mid + (int(left_eye_im.size[0] / 2), int(left_eye_im.size[1] / 2))
+    right_eye_pos = (1500, 700)#desired_right_eye_mid + (int(right_eye_im.size[0] / 2), int(right_eye_im.size[1] / 2))
+
+    blank_image.paste(mouth_im,mouth_pos,mouth_im)
+    blank_image.paste(left_eye_im, left_eye_pos, left_eye_im)
+    blank_image.paste(right_eye_im, right_eye_pos, right_eye_im)
 
     blank_image.save("TEMP_IMS//blank" + ".png")
-
-
-
 
 def add_image_at_position(base,overlay,position):
     x_offset,y_offset = position
@@ -113,6 +116,20 @@ def get_interpolated_points(np_points,desired_num_points):
 
     return np.array(new_points)
 
+def compare_PIL_IMS(img1,img2):
+    if (img1.mode != img2.mode) \
+            or (img1.size != img2.size) \
+            or (img1.getbands() != img2.getbands()):
+        return None
+
+        # Generate diff image in memory.
+    diff_img = ImageChops.difference(img1, img2)
+    # Calculate difference as a ratio.
+    stat = ImageStat.Stat(diff_img)
+    diff_ratio = sum(stat.mean) / (len(stat.mean) * 255)
+
+    return diff_ratio * 100
+
 
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
@@ -143,8 +160,9 @@ if len(faces) > 0:
         #cv2.putText(compositImg,str(n),(x,y-10),cv2.FONT_HERSHEY_COMPLEX_SMALL,0.8,(0,0,255))
     if len(myPoints) > 0:
         myPoints = np.array(myPoints)
-        INITIAL_SCALE_FACTOR = 10 # must be int used to scale up to get smoother edges after slicing
-        DOWNSAMPLE_SCALE_FACTOR = .2 # scaled down after to increase edge smoothness
+        # the scale factors directly reflect the smoothness of the edges
+        INITIAL_SCALE_FACTOR = 7.5 # must be int used to scale up to get smoother edges after slicing
+        DOWNSAMPLE_SCALE_FACTOR = .25 # scaled down after to increase edge smoothness
         # scale up points so we can downscale after and have higher res
         myPoints = resize_points(myPoints,INITIAL_SCALE_FACTOR)
         img = resize_image_CV2(img,INITIAL_SCALE_FACTOR)
@@ -157,20 +175,12 @@ if len(faces) > 0:
         imgRightEye = createBox(img, right_eye_points)
 
         #downscale
-        #imgMouth = resize_image_CV2(imgMouth, DOWNSAMPLE_SCALE_FACTOR)
-        #imgLeftEye = resize_image_CV2(imgLeftEye, DOWNSAMPLE_SCALE_FACTOR)
-        #imgRightEye = resize_image_CV2(imgRightEye, DOWNSAMPLE_SCALE_FACTOR)
+        imgMouth = resize_image_CV2(imgMouth, DOWNSAMPLE_SCALE_FACTOR)
+        imgLeftEye = resize_image_CV2(imgLeftEye, DOWNSAMPLE_SCALE_FACTOR)
+        imgRightEye = resize_image_CV2(imgRightEye, DOWNSAMPLE_SCALE_FACTOR)
 
-        cv2_intermediate_mouth_path = "TEMP_IMS//intermediate_mouth.png"
-        cv2_intermediate_left_eye_path = "TEMP_IMS//intermediate_left_eye.png"
-        cv2_intermediate_right_eye_path = "TEMP_IMS//intermediate_right_eye.png"
-        cv2.imwrite(cv2_intermediate_mouth_path, imgMouth)
-        cv2.imwrite(cv2_intermediate_left_eye_path, imgLeftEye)
-        cv2.imwrite(cv2_intermediate_right_eye_path, imgRightEye)
+        do_PIL_processing(imgMouth, imgLeftEye, imgRightEye)
 
-        do_PIL_processing(cv2_intermediate_mouth_path,cv2_intermediate_left_eye_path,cv2_intermediate_right_eye_path)
-
-cv2.imshow('result', compositImg)
 
 #you were at 20:28 in the linked youtube video. currently trying to get a much cleaner mask / outline for
 #    tracing the mouth and eyes. we need to test if this is a viable proceedure to do
@@ -178,10 +188,3 @@ cv2.imshow('result', compositImg)
 
 # issues
 # make transparent off mask so eyeball doesn't go transparent
-#the key is to upscale before you mask but after you detect.
-#to do this just multiply the detected points by the scale factor
-#upscale it a large amount then downscale after masking to get clean edges
-
-#after doing the above see if you can get the alpha to work off only making it
-#transparent where the mask is black. this will ideally make it not make the pupil
-#transparent
