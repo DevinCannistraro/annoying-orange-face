@@ -57,9 +57,9 @@ def do_PIL_processing(mouth_path,left_eye_path,right_eye_path):
     mouth_im = Image.open(mouth_path)
     left_eye_im = Image.open(left_eye_path)
     right_eye_im = Image.open(right_eye_path)
-    mouth_im = anti_alias_resize_path_PIL(mouth_im,2,"mouth_resize")
-    left_eye_im = anti_alias_resize_path_PIL(left_eye_im, 2, "left_resize")
-    right_eye_im = anti_alias_resize_path_PIL(right_eye_im, 2, "right_resize")
+    #mouth_im = anti_alias_resize_path_PIL(mouth_im,2,"mouth_resize")
+    #left_eye_im = anti_alias_resize_path_PIL(left_eye_im, 2, "left_resize")
+    #right_eye_im = anti_alias_resize_path_PIL(right_eye_im, 2, "right_resize")
 
     blank_image = Image.new("RGBA",(1920,1080),(0,0,0,0))
 
