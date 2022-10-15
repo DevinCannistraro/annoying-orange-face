@@ -5,6 +5,7 @@ import numpy as np
 import skimage
 import os
 import PIL
+from PIL import Image
 
 #https://www.youtube.com/watch?v=V2gmgkSqyi8
 #https://medium.com/@MeerAjaz/the-function-is-not-implemented-6804e9b38b06
@@ -29,21 +30,33 @@ def createBox(img,points,scale=5):
     # Stack new alpha layer with existing image to go from BGR to BGRA, i.e. 3 channels to 4 channels
     res = np.dstack((imgCrop, alpha))
     imgCrop = res
+
     return imgCrop
 
-def anti_alias_resize_path(path):
+def anti_alias_resize_path(im,scaler,name):
+    print("test")
+    width, height = im.size
+    im = im.resize((width * scaler, height * scaler), resample=Image.Resampling.LANCZOS)
+    im.save("TEMP_IMS//" + name + ".png")
+
+
+def do_PIL_processing(mouth_path,left_eye_path,right_eye_path):
+    mouth_im = Image.open(mouth_path)
+    left_eye_im = Image.open(left_eye_path)
+    right_eye_im = Image.open(right_eye_path)
+    anti_alias_resize_path(mouth_im,20,"mouth_resize")
+    anti_alias_resize_path(left_eye_im, 20, "left_resize")
+    anti_alias_resize_path(right_eye_im, 20, "right_resize")
 
 def add_image_at_position(base,overlay,position):
     x_offset,y_offset = position
     base[y_offset:y_offset + overlay.shape[0], x_offset:x_offset + overlay.shape[1]] = overlay
 
-def do_cv2_processing():
-    print("test")
 
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(5)
 
 if not os.path.exists("TEMP_IMS"):
     os.mkdir("TEMP_IMS")
@@ -76,13 +89,17 @@ while cap.isOpened():
         if len(myPoints) > 0:
             myPoints = np.array(myPoints)
             imgMouth = createBox(img,np.int32([myPoints[48:60]]))
-            cv2.imshow("mouth",imgMouth)
-            cv2.imwrite("intermediate_mouth.png", imgMouth)
-
-            #https://stackoverflow.com/questions/62078016/smooth-the-edges-of-binary-images-face-using-python-and-open-cv maybe look at this
-
             imgLeftEye = createBox(img, np.int32([myPoints[36:42]]))
             imgRightEye = createBox(img, np.int32([myPoints[42:48]]))
+
+            cv2_intermediate_mouth_path = "TEMP_IMS//intermediate_mouth.png"
+            cv2_intermediate_left_eye_path = "TEMP_IMS//intermediate_left_eye.png"
+            cv2_intermediate_right_eye_path = "TEMP_IMS//intermediate_right_eye.png"
+            cv2.imwrite(cv2_intermediate_mouth_path, imgMouth)
+            cv2.imwrite(cv2_intermediate_left_eye_path, imgLeftEye)
+            cv2.imwrite(cv2_intermediate_right_eye_path, imgRightEye)
+
+            do_PIL_processing(cv2_intermediate_mouth_path,cv2_intermediate_left_eye_path,cv2_intermediate_right_eye_path)
 
     cv2.imshow('result', compositImg)
 
