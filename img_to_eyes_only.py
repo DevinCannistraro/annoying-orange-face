@@ -47,37 +47,43 @@ def resize_points(points,scalar):
     new_points = points * scalar
     return new_points
 
-def do_PIL_processing(mouth_path,left_eye_path,right_eye_path):
-    mouth_path = mouth_path[..., [2, 1, 0, 3]].copy() # convert from BGRA to RGBA
-    left_eye_path = left_eye_path[..., [2, 1, 0, 3]].copy()
-    right_eye_path = right_eye_path[..., [2, 1, 0, 3]].copy()
+def do_PIL_processing(CV2_MOUTH_IMG,CV2_LEFT_EYE_IMG,CV2_RIGHT_EYE_IMG,output_path,output_dims):
+    mouth_path = CV2_MOUTH_IMG[..., [2, 1, 0, 3]].copy() # convert from BGRA to RGBA
+    left_eye_path = CV2_LEFT_EYE_IMG[..., [2, 1, 0, 3]].copy()
+    right_eye_path = CV2_RIGHT_EYE_IMG[..., [2, 1, 0, 3]].copy()
     mouth_im = Image.fromarray(mouth_path)
     left_eye_im = Image.fromarray(left_eye_path)
     right_eye_im = Image.fromarray(right_eye_path)
 
     #can save intermediates if you would like
-    #mouth_im.save("TEMP_IMS//m_test" + ".png")
-    #left_eye_im.save("TEMP_IMS//le_test" + ".png")
-    #right_eye_im.save("TEMP_IMS//re_test" + ".png")
+    #mouth_im.save("TEMP_FACE_IMS//m_test" + ".png")
+    #left_eye_im.save("TEMP_FACE_IMS//le_test" + ".png")
+    #right_eye_im.save("TEMP_FACE_IMS//re_test" + ".png")
 
-    blank_image = Image.new("RGBA",(1920,1080),(0,0,0,0))
+    blank_image = Image.new("RGBA",output_dims,(0,0,0,0))
 
-    print(mouth_im.getpixel((10,10)))
-    print(blank_image.getpixel((10,10)))
-
-    desired_mouth_mid_pos = (300, 100)
-    desired_left_eye_mid = (1000, 400)
-    desired_right_eye_mid = (1500, 700)
+    desired_mouth_mid_pos = (960, 640)
+    desired_left_eye_mid = (760, 340)
+    desired_right_eye_mid = (1160, 340)
     # add the midpoint to each to get them to be middle justified
-    mouth_pos = (300, 100)#desired_mouth_mid_pos + (int(mouth_im.size[0]/2),int(mouth_im.size[1]/2))
-    left_eye_pos = (1000, 400)#desired_left_eye_mid + (int(left_eye_im.size[0] / 2), int(left_eye_im.size[1] / 2))
-    right_eye_pos = (1500, 700)#desired_right_eye_mid + (int(right_eye_im.size[0] / 2), int(right_eye_im.size[1] / 2))
+
+    mouth_relative_mid_point = (int(mouth_im.size[0]/2),int(mouth_im.size[1]/2))
+    left_eye_relative_mid_point = (int(left_eye_im.size[0] / 2), int(left_eye_im.size[1] / 2))
+    right_eye_relative_mid_point = (int(right_eye_im.size[0] / 2), int(right_eye_im.size[1] / 2))
+
+    mouth_pos = (desired_mouth_mid_pos[0] - mouth_relative_mid_point[0],desired_mouth_mid_pos[1] - mouth_relative_mid_point[1])
+    left_eye_pos = (desired_left_eye_mid[0] - left_eye_relative_mid_point[0],desired_left_eye_mid[1] - left_eye_relative_mid_point[1])
+    right_eye_pos = (desired_right_eye_mid[0] - right_eye_relative_mid_point[0],desired_right_eye_mid[1] - right_eye_relative_mid_point[1])
+
+    #print("mouth",desired_mouth_mid_pos, mouth_relative_mid_point,mouth_pos)
+    #print("left", desired_left_eye_mid, left_eye_relative_mid_point, left_eye_pos)
+    #print("right", desired_right_eye_mid, right_eye_relative_mid_point, right_eye_pos)
 
     blank_image.paste(mouth_im,mouth_pos,mouth_im)
     blank_image.paste(left_eye_im, left_eye_pos, left_eye_im)
     blank_image.paste(right_eye_im, right_eye_pos, right_eye_im)
 
-    blank_image.save("TEMP_IMS//blank" + ".png")
+    blank_image.save(output_path)
 
 def add_image_at_position(base,overlay,position):
     x_offset,y_offset = position
@@ -134,57 +140,61 @@ def compare_PIL_IMS(img1,img2):
 detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor('shape_predictor_68_face_landmarks.dat')
 
-if not os.path.exists("TEMP_IMS"):
-    os.mkdir("TEMP_IMS")
-
-img = cv2.imread("test_im.jpg")
-
-faces = detector(img)
-
-compositImg = img.copy()
-imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-if len(faces) > 0:
-    face = faces[0]
-    x1,y1 = face.left(), face.top()
-    x2,y2 = face.right(),face.bottom()
-    #compositImg = cv2.rectangle(img,(x1,y1),(x2,y2),(0,255,0),2)
-    landmarks = predictor(imgGray,face)
-
-    myPoints = []
-    for n in range(68):
-        x = landmarks.part(n).x
-        y = landmarks.part(n).y
-        myPoints.append([x,y])
-        #cv2.circle(compositImg,(x,y),5,(50,50,255),cv2.FILLED)
-        #cv2.putText(compositImg,str(n),(x,y-10),cv2.FONT_HERSHEY_COMPLEX_SMALL,0.8,(0,0,255))
-    if len(myPoints) > 0:
-        myPoints = np.array(myPoints)
-        # the scale factors directly reflect the smoothness of the edges
-        INITIAL_SCALE_FACTOR = 7.5 # must be int used to scale up to get smoother edges after slicing
-        DOWNSAMPLE_SCALE_FACTOR = .25 # scaled down after to increase edge smoothness
-        # scale up points so we can downscale after and have higher res
-        myPoints = resize_points(myPoints,INITIAL_SCALE_FACTOR)
-        img = resize_image_CV2(img,INITIAL_SCALE_FACTOR)
-
-        mouth_points = np.int32([get_interpolated_points(myPoints[48:60],200)])
-        imgMouth = createBox(img,mouth_points)
-        left_eye_points = np.int32([get_interpolated_points(myPoints[36:42], 200)])
-        imgLeftEye = createBox(img, left_eye_points)
-        right_eye_points = np.int32([get_interpolated_points(myPoints[42:48], 200)])
-        imgRightEye = createBox(img, right_eye_points)
-
-        #downscale
-        imgMouth = resize_image_CV2(imgMouth, DOWNSAMPLE_SCALE_FACTOR)
-        imgLeftEye = resize_image_CV2(imgLeftEye, DOWNSAMPLE_SCALE_FACTOR)
-        imgRightEye = resize_image_CV2(imgRightEye, DOWNSAMPLE_SCALE_FACTOR)
-
-        do_PIL_processing(imgMouth, imgLeftEye, imgRightEye)
+if not os.path.exists("TEMP_FACE_IMS"):
+    os.mkdir("TEMP_FACE_IMS")
 
 
-#you were at 20:28 in the linked youtube video. currently trying to get a much cleaner mask / outline for
-#    tracing the mouth and eyes. we need to test if this is a viable proceedure to do
-#    this seems somewhat promising.
+def make_face_from_file(input_path,output_path,output_dims):
 
-# issues
-# make transparent off mask so eyeball doesn't go transparent
+    img = cv2.imread(input_path)
+
+    faces = detector(img)
+
+    imgGray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    # if there is a face make it transparent
+    if len(faces) > 0:
+        face = faces[0]
+        x1,y1 = face.left(), face.top()
+        x2,y2 = face.right(),face.bottom()
+        #compositImg = cv2.rectangle(img,(x1,y1),(x2,y2),(0,255,0),2)
+        landmarks = predictor(imgGray,face)
+
+        myPoints = []
+        for n in range(68):
+            x = landmarks.part(n).x
+            y = landmarks.part(n).y
+            myPoints.append([x,y])
+            #cv2.circle(compositImg,(x,y),5,(50,50,255),cv2.FILLED)
+            #cv2.putText(compositImg,str(n),(x,y-10),cv2.FONT_HERSHEY_COMPLEX_SMALL,0.8,(0,0,255))
+        if len(myPoints) > 0:
+            myPoints = np.array(myPoints)
+            # the scale factors directly reflect the smoothness of the edges
+            INITIAL_SCALE_FACTOR = 7.5 # must be int used to scale up to get smoother edges after slicing
+            DOWNSAMPLE_SCALE_FACTOR = .25 # scaled down after to increase edge smoothness
+            # scale up points so we can downscale after and have higher res
+            myPoints = resize_points(myPoints,INITIAL_SCALE_FACTOR)
+            img = resize_image_CV2(img,INITIAL_SCALE_FACTOR)
+
+            mouth_points = np.int32([get_interpolated_points(myPoints[48:60],200)])
+            imgMouth = createBox(img,mouth_points)
+            left_eye_points = np.int32([get_interpolated_points(myPoints[36:42], 200)])
+            imgLeftEye = createBox(img, left_eye_points)
+            right_eye_points = np.int32([get_interpolated_points(myPoints[42:48], 200)])
+            imgRightEye = createBox(img, right_eye_points)
+
+            #downscale
+            imgMouth = resize_image_CV2(imgMouth, DOWNSAMPLE_SCALE_FACTOR)
+            imgLeftEye = resize_image_CV2(imgLeftEye, DOWNSAMPLE_SCALE_FACTOR)
+            imgRightEye = resize_image_CV2(imgRightEye, DOWNSAMPLE_SCALE_FACTOR)
+
+            do_PIL_processing(imgMouth, imgLeftEye, imgRightEye,output_path,output_dims)
+    else: # if there is no faces
+        print("blank image")
+        blank_image = Image.new("RGBA", output_dims, (0, 0, 0, 0))
+        blank_image.save(output_path)
+
+
+make_face_from_file("orange.jpg","TEMP_FACE_IMS//blank.png",(1920,1080))
+
+#if no faces make it output just a transparent image

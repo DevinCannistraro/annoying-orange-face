@@ -140,8 +140,8 @@
       <list>
         <item itemvalue="Python.img_to_eyes_only" />
         <item itemvalue="Python.make_less_jaggy" />
-        <item itemvalue="Python.main_custom" />
         <item itemvalue="Python.main" />
+        <item itemvalue="Python.main_custom" />
         <item itemvalue="Python.data_formatter" />
       </list>
     </recent_temporary>
